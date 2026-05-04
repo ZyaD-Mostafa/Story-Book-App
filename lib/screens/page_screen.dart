@@ -32,7 +32,6 @@ class _PageScreenState extends State<PageScreen> {
 
   StoryPage get currentPage => widget.story.pages[currentIndex];
 
-  // ===== Edit Page Text =====
   void editText() {
     final controller =
     TextEditingController(text: currentPage.textContent);
@@ -40,13 +39,10 @@ class _PageScreenState extends State<PageScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("✏️ Edit Page Text"),
+        title: const Text("✏️ Edit Page"),
         content: TextField(
           controller: controller,
           maxLines: 6,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
         ),
         actions: [
           TextButton(
@@ -68,9 +64,8 @@ class _PageScreenState extends State<PageScreen> {
     );
   }
 
-  // ===== Pick Image =====
   Future<void> pickImage() async {
-    final XFile? image =
+    final image =
     await _picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
@@ -80,71 +75,40 @@ class _PageScreenState extends State<PageScreen> {
       widget.onUpdate();
     }
   }
-
-  // ===== Navigation =====
-  void nextPage() {
-    if (currentIndex < widget.story.pages.length - 1) {
-      setState(() => currentIndex++);
-    }
-  }
-
-  void previousPage() {
-    if (currentIndex > 0) {
-      setState(() => currentIndex--);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final page = currentPage;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8E1),
       appBar: AppBar(
         title: Text(
-          "${widget.story.title} 📖",
+            "Page ${currentIndex + 1} of ${widget.story.pages.length}",
           style: const TextStyle(fontSize: 22),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.image),
-            tooltip: "Add Image",
-            onPressed: pickImage,
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: "Edit Text",
-            onPressed: editText,
-          ),
+          IconButton(onPressed: pickImage, icon: const Icon(Icons.image)),
+          IconButton(onPressed: editText, icon: const Icon(Icons.edit)),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // ===== Page Counter =====
-            Text(
-              "Page ${currentIndex + 1} of ${widget.story.pages.length}",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            // ===== Image =====
+            // ===== IMAGE =====
             if (page.imagePath != null &&
                 File(page.imagePath!).existsSync())
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.file(
-                  File(page.imagePath!),
-                  height: 220,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.deepPurple, width: 3),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17),
+                  child: Image.file(
+                    File(page.imagePath!),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               )
             else
@@ -154,53 +118,56 @@ class _PageScreenState extends State<PageScreen> {
                 decoration: BoxDecoration(
                   color: Colors.orange[100],
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orange, width: 2),
                 ),
-                child: const Icon(
-                  Icons.image,
-                  size: 100,
-                  color: Colors.orange,
-                ),
+                child: const Icon(Icons.image, size: 80),
               ),
-
             const SizedBox(height: 20),
-
-            // ===== Text Content =====
+            // ===== TEXT =====
             Expanded(
-              child: Card(
-                shape: RoundedRectangleBorder(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.deepPurple, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
                 ),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      page.textContent,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        height: 1.5,
-                      ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    page.textContent,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      height: 1.4,
                     ),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 15),
-
-            // ===== Navigation Buttons =====
+            const SizedBox(height: 20),
+            // ===== NAV BUTTONS =====
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ElevatedButton.icon(
-                  onPressed: previousPage,
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text("Previous"),
+                ElevatedButton(
+                  onPressed: currentIndex > 0
+                      ? () => setState(() => currentIndex--)
+                      : null,
+                  child: const Text("⬅ Previous"),
                 ),
-                ElevatedButton.icon(
-                  onPressed: nextPage,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text("Next"),
+                ElevatedButton(
+                  onPressed: currentIndex <
+                      widget.story.pages.length - 1
+                      ? () => setState(() => currentIndex++)
+                      : null,
+                  child: const Text("Next ➡"),
                 ),
               ],
             ),

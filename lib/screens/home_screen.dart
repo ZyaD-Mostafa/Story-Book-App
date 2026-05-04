@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/story.dart';
-import '../storage/story_storage.dart';
+import '../controllers/story_controller.dart';
+import '../repositories/story_local_storage.dart';
 import 'story_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -11,40 +12,80 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Story> stories = [];
+  late StoryController controller;
   bool isLoading = true;
+
+  String searchQuery = "";
 
   @override
   void initState() {
     super.initState();
-    loadStories();
+    controller = StoryController(StoryLocalStorage());
+    loadData();
   }
 
-  void loadStories() async {
-    stories = await StoryStorage.loadStories();
-    setState(() {
-      isLoading = false;
-    });
+  Future<void> loadData() async {
+    setState(() => isLoading = true);
+    await controller.loadStories();
+    setState(() => isLoading = false);
   }
 
-  void addStory() async {
-    final newStory = Story(
-      id: DateTime.now().millisecondsSinceEpoch,
-      title: 'New Story',
-      author: 'Student',
-      createdAt: DateTime.now(),
-      pages: [],
+  List<Story> get filteredStories {
+    if (searchQuery.isEmpty) {
+      return controller.stories;
+    }
+
+    return controller.stories
+        .where((story) =>
+        story.title.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+  }
+
+  void deleteStory(int id) async {
+    await controller.deleteStory(id);
+    setState(() {});
+  }
+
+  void showCreateDialog() {
+    final textController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Create Story 📖"),
+        content: TextField(
+          controller: textController,
+          decoration: const InputDecoration(
+            hintText: "Story title",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final story = Story(
+                id: DateTime.now().millisecondsSinceEpoch,
+                title: textController.text.isEmpty
+                    ? "Untitled"
+                    : textController.text,
+                author: "Student",
+                createdAt: DateTime.now(),
+                pages: [],
+              );
+
+              await controller.addStory(story);
+              setState(() {});
+
+              Navigator.pop(context);
+            },
+            child: const Text("Create"),
+          ),
+        ],
+      ),
     );
-
-    stories.add(newStory);
-    await StoryStorage.saveStories(stories);
-    setState(() {});
-  }
-
-  void deleteStory(int index) async {
-    stories.removeAt(index);
-    await StoryStorage.saveStories(stories);
-    setState(() {});
   }
 
   @override
@@ -56,26 +97,48 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Storybook Creator')),
-      body: ListView.builder(
-        itemCount: stories.length,
-        itemBuilder: (context, index) {
-          final story = stories[index];
-          return Card(
-            margin: const EdgeInsets.all(10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+      appBar: AppBar(
+        title: const Text("📚 My Stories"),
+
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(55),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+              },
+              decoration: InputDecoration(
+                hintText: "Search stories...",
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
+          ),
+        ),
+      ),
+
+      body: filteredStories.isEmpty
+          ? const Center(child: Text("No stories found"))
+          : ListView.builder(
+        itemCount: filteredStories.length,
+        itemBuilder: (context, index) {
+          final story = filteredStories[index];
+
+          return Card(
+            margin: const EdgeInsets.all(12),
             child: ListTile(
-              leading: const Icon(Icons.book, size: 40, color: Colors.deepPurple),
-              title: Text(
-                story.title,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                'Pages: ${story.getPageCount()}',
-                style: const TextStyle(fontSize: 18),
-              ),
+              leading: const Icon(Icons.book, color: Colors.orange),
+              title: Text(story.title),
+              subtitle: Text("Pages: ${story.pages.length}"),
+
               onTap: () {
                 Navigator.push(
                   context,
@@ -83,20 +146,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (_) => StoryDetailScreen(
                       story: story,
                       onUpdate: () async {
-                        await StoryStorage.saveStories(stories);
+                        await controller.update();
                         setState(() {});
                       },
                     ),
                   ),
                 );
               },
+
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => deleteStory(story.id),
+              ),
             ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: addStory,
-        child: const Icon(Icons.add),
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: showCreateDialog,
+        icon: const Icon(Icons.add),
+        label: const Text("Create Story"),
       ),
     );
   }
