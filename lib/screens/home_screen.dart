@@ -1,3 +1,4 @@
+import 'package:book_story_final/widgets/story_card.dart';
 import 'package:flutter/material.dart';
 import '../models/story.dart';
 import '../controllers/story_controller.dart';
@@ -132,33 +133,23 @@ class _HomeScreenState extends State<HomeScreen> {
         itemBuilder: (context, index) {
           final story = filteredStories[index];
 
-          return Card(
-            margin: const EdgeInsets.all(12),
-            child: ListTile(
-              leading: const Icon(Icons.book, color: Colors.orange),
-              title: Text(story.title),
-              subtitle: Text("Pages: ${story.pages.length}"),
-
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StoryDetailScreen(
-                      story: story,
-                      onUpdate: () async {
-                        await controller.update();
-                        setState(() {});
-                      },
-                    ),
+          return StoryCard(
+            story: story,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StoryDetailScreen(
+                    story: story,
+                    onUpdate: () async {
+                      await controller.update();
+                      setState(() {});
+                    },
                   ),
-                );
-              },
-
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => deleteStory(story.id),
-              ),
-            ),
+                ),
+              );
+            },
+            onDelete: () => deleteStory(story.id),
           );
         },
       ),

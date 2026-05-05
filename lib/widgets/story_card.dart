@@ -16,6 +16,7 @@ class StoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.all(10),
       child: ListTile(
         leading: const Icon(Icons.book, color: Colors.orange),
         title: Text(story.title),
